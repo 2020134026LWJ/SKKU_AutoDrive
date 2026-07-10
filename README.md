@@ -27,6 +27,7 @@ SKKU_AutoDrive/
 │   ├── HARDWARE_CODE_MAP.md    # ★ 부품↔코드 지도 (어느 코드가 뭘 돌리나 + 바꿀 곳)
 │   ├── CALIBRATION.md          # 하드웨어 실측값 체크리스트
 │   ├── IMPLEMENTATION.md       # 구현 로드맵 (Phase 0~6)
+│   ├── JAZZY_BUILD_NOTES.md    # Jazzy 빌드 감사 결과 + 빌드 순서/에러 대응
 │   └── code_usage_plan.md      # AutoSDV-HPC 코드 사용 계획 (파일별 수정 위치)
 ├── ros2_ws/src/                # ROS2 워크스페이스 (AutoSDV-HPC src/ 미러)
 │   ├── camera_perception_pkg/  # 이미지 발행 + YOLO + 차선/신호등 인식
