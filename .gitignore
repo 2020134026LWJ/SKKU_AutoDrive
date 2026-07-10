@@ -1,0 +1,43 @@
+# --- ROS2 colcon ---
+build/
+install/
+log/
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# --- 대용량 산출물 ---
+# 모델 가중치: models/README.md 에 받는 경로만 기록하고 파일 자체는 커밋 X
+*.pt
+*.onnx
+*.engine
+
+# rosbag / 주행 로그 / 녹화 영상
+*.bag
+*.db3
+rosbag2_*/
+*.mp4
+*.avi
+
+# --- 캘리브레이션 실측값 (기기별로 달라서 공유 X) ---
+# 템플릿은 config/*.example.yaml 로 커밋
+config/*.local.yaml
+
+# --- Arduino ---
+*.hex
+*.elf
+
+# --- 로그 ---
+*.log
+
+# --- 학습용 데이터셋 (레포에 딸려온 것, 코드엔 불필요) ---
+Collected_Datasets/
+
+# --- 에디터 / OS ---
+.vscode/
+.idea/
+.DS_Store
