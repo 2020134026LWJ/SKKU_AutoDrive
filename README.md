@@ -24,6 +24,8 @@
 SKKU_AutoDrive/
 ├── docs/
 │   ├── ROS2_입문_가이드.md      # ★ ROS 처음이면 이것부터 (구조/실행/C↔Python)
+│   ├── HARDWARE_CODE_MAP.md    # ★ 부품↔코드 지도 (어느 코드가 뭘 돌리나 + 바꿀 곳)
+│   ├── CALIBRATION.md          # 하드웨어 실측값 체크리스트
 │   ├── IMPLEMENTATION.md       # 구현 로드맵 (Phase 0~6)
 │   └── code_usage_plan.md      # AutoSDV-HPC 코드 사용 계획 (파일별 수정 위치)
 ├── ros2_ws/src/                # ROS2 워크스페이스 (AutoSDV-HPC src/ 미러)
