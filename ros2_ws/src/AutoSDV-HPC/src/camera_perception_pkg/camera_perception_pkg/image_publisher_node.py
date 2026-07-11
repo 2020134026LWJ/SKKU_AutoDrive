@@ -38,8 +38,10 @@ IMAGE_DIRECTORY_PATH = os.path.join(_SRC_LIB, 'sample_dataset')
 # 비디오 데이터 파일의 경로 (파라미터 video_path로 덮어쓰기 가능)
 VIDEO_FILE_PATH = os.path.join(_SHARE, 'Collected_Datasets', 'driving_simulation.mp4')
 
-# 화면에 publish하는 이미지를 띄울것인지 여부: True, 또는 False 중 택1하여 입력
-SHOW_IMAGE = True
+# 화면에 publish하는 이미지를 띄울것인지 여부 (cv2.imshow)
+# 기본 False — imshow는 프레임당 비용이 크고(실측), 헤드리스/원격 실행 시 무의미하다.
+# 눈으로 보고 싶으면: ros2 run ... --ros-args -p logger:=true  (또는 launch에서 파라미터)
+SHOW_IMAGE = False
 
 # 이미지 발행 주기 (초) - 소수점 필요 (int형은 반영되지 않음)
 TIMER = 0.03
@@ -145,7 +147,6 @@ class ImagePublisherNode(Node):
                 image_msg.header.stamp = self.get_clock().now().to_msg()
                 image_msg.header.frame_id = 'image_01'
                 self.publisher.publish(image_msg)
-                print(image_msg.header)
                 if self.logger:
                     cv2.imshow('Video Frame', img)
                     cv2.waitKey(1)
