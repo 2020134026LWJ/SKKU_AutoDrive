@@ -52,19 +52,24 @@ pycdc 디컴파일 + pycdas 바이트코드 대조로 3개 `func_lib` 복원. **
 검증: 3파일 컴파일·import OK, 로직 함수 실행 테스트 통과(detect_object/StabilityDetector/rotate/slope),
 cv2 함수 합성이미지 테스트 통과(dominant_gradient=25.0°, get_lane_center=250.0).
 
-## Phase 1 — 빌드/실행 통과 (하드웨어 0)
+## Phase 1 — 빌드/실행 통과 (하드웨어 0) ✅ 완료 (2026-07-12)
 
-- [ ] 레포의 `build/` `install/` `log/` 삭제 (Humble 산출물)
-- [ ] 복원 `.py` 3종을 각 `lib/`에 배치, `.cpython-310.pyc` 제거
-- [ ] `interfaces_pkg` 커스텀 메시지 빌드
-- [ ] `colcon build` 통과 (Jazzy API 차이 발생 시 여기서 수정)
-- [ ] 목표: 노드가 import 에러 없이 기동
+- [x] 레포의 `build/` `install/` `log/` 삭제 (Humble 산출물)
+- [x] 복원 `.py` 3종을 각 `lib/`에 배치, `.cpython-310.pyc` 제거
+- [x] `interfaces_pkg` 커스텀 메시지 빌드
+- [x] `colcon build` 통과 — 10개 패키지, 실패 0 (경고만: tests_require/CMake deprecation)
+- [x] 목표: 노드가 import 에러 없이 기동
 
-## Phase 2 — 녹화 데이터로 인지 파이프라인 검증 (하드웨어 0)
+> 빌드는 처음부터 통과했고 **문제는 전부 실행할 때 나왔다** → `RUNTIME_FIXES.md` 참조
+> (pyc 로더 / cv_bridge×numpy2 / 영상 경로 / 모델 경로 / motion_planner 크래시)
 
-- [ ] 레포 샘플(`driving_simulation.mp4`, `rosbag2_...`)로
+## Phase 2 — 녹화 데이터로 인지 파이프라인 검증 (하드웨어 0) ✅ 완료 (2026-07-12)
+
+- [x] 레포 샘플(`driving_simulation.mp4`)로
       `image_publisher(video)` → `yolov8` → `lane_info_extractor` → `path_planner` 구동 확인
-- [ ] 구조/토픽 흐름 검증 (좌표는 원팀 값 상태라 결과 부정확해도 무방)
+- [x] 구조/토픽 흐름 검증 — 노드 6개 생존, 죽은 노드 0,
+      `/topic_control_signal` 10Hz로 `steering/left_speed/right_speed` 발행 확인
+- [ ] (남음) 발행 주기 안정화 — `/image_01`이 2~3Hz로 들쭉날쭉 (`cv2.imshow` 병목 의심)
 
 ## Phase 3 — 하드웨어 브링업 (장치별 독립)
 

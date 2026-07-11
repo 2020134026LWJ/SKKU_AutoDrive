@@ -28,7 +28,6 @@ from rclpy.lifecycle import LifecycleState
 from .lib.cv_bridge_np import CvBridge   # numpy2 호환 (원본 cv_bridge는 numpy1 C확장)
 
 from ultralytics import YOLO
-import os
 from ultralytics.engine.results import Results
 from ultralytics.engine.results import Boxes
 from ultralytics.engine.results import Masks
@@ -45,55 +44,6 @@ from interfaces_pkg.msg import Detection
 from interfaces_pkg.msg import DetectionArray
 
 from std_srvs.srv import SetBool
-
-
-# ─── 모델 파일 찾기 ──────────────────────────────────────────────────────────
-# 원본은 파라미터 model="best_urp.pt" (파일명만) → **실행한 디렉토리** 기준으로 찾는다.
-# ros2 launch를 ros2_ws에서 돌리면 못 찾고 노드가 죽는다. 가중치는 용량(23MB) 때문에
-# git 제외라 위치가 사람마다 다를 수 있으므로, 후보 디렉토리를 순서대로 뒤진다.
-#   1) SKKU_MODELS_DIR 환경변수  2) 프로젝트 models/  3) AutoSDV-HPC 레포 루트  4) 현재 위치
-# 절대경로를 주면 그대로 쓴다.
-
-def _model_search_dirs() -> list:
-    """모델을 찾아볼 디렉토리 목록.
-
-    [주의] 런타임의 __file__은 **install 트리**(ros2_ws/install/...)를 가리킨다. 소스 트리
-    기준으로 상대경로를 계산하면 어긋난다. 그래서 __file__과 CWD에서 **위로 거슬러 올라가며**
-    후보를 모은다 — 어느 트리에서 실행하든 결국 SKKU_AutoDrive/ 를 지나가므로 models/ 를 만난다.
-    """
-    dirs = []
-    if os.environ.get("SKKU_MODELS_DIR"):
-        dirs.append(os.environ["SKKU_MODELS_DIR"])
-
-    for start in (os.path.dirname(os.path.abspath(__file__)), os.getcwd()):
-        d = start
-        for _ in range(8):                       # 위로 8단계까지
-            dirs.append(os.path.join(d, "models"))          # 프로젝트 models/
-            dirs.append(os.path.join(d, "ros2_ws", "src", "AutoSDV-HPC"))  # 레포 루트(원본 위치)
-            parent = os.path.dirname(d)
-            if parent == d:
-                break
-            d = parent
-
-    dirs.append(os.getcwd())
-    seen, uniq = set(), []
-    for d in dirs:
-        if d not in seen:
-            seen.add(d)
-            uniq.append(d)
-    return uniq
-
-
-def _resolve_model(model: str) -> str:
-    if os.path.isabs(model):
-        if not os.path.exists(model):
-            raise FileNotFoundError(model)
-        return model
-    for d in _model_search_dirs():
-        candidate = os.path.join(d, model)
-        if os.path.exists(candidate):
-            return candidate
-    raise FileNotFoundError(model)
 
 
 class Yolov8Node(LifecycleNode):
@@ -160,14 +110,10 @@ class Yolov8Node(LifecycleNode):
         self.get_logger().info(f'Activating {self.get_name()}')
 
         try:
-            model_path = _resolve_model(self.model)   # 실행 위치에 안 휘둘리게 (아래 함수 주석)
-            self.get_logger().info(f"모델 로딩: {model_path}")
-            self.yolo = YOLO(model_path)  # 모델 로딩
+            self.yolo = YOLO(self.model)  # 모델 로딩
             self.yolo.fuse()
         except FileNotFoundError:
-            self.get_logger().error(
-                f"Error: Model file '{self.model}' not found! "
-                f"(찾아본 곳: {', '.join(_model_search_dirs())})")
+            self.get_logger().error(f"Error: Model file '{self.model}' not found!")
             return TransitionCallbackReturn.FAILURE
         except Exception as e:
             self.get_logger().error(f"Error while loading model '{self.model}': {str(e)}")

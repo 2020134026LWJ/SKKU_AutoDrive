@@ -13,8 +13,6 @@ import sys
 import cv2
 import os
 
-from ament_index_python.packages import get_package_share_directory
-
 #---------------Variable Setting---------------
 # Publish할 토픽 이름
 PUB_TOPIC_NAME = 'image_01'
@@ -25,18 +23,11 @@ DATA_SOURCE = 'video'
 # 카메라(웹캠) 장치 번호 (ls /dev/video* 명령을 터미널 창에 입력하여 확인)
 CAM_NUM = 0
 
-# 데이터셋 경로 — 원본은 상대경로였다('src/camera_perception_pkg/...'). 그러면 **실행한
-# 디렉토리**에 따라 파일을 못 찾는다(ros2_ws에서 ros2 launch 하면 바로 실패).
-# 영상은 setup.py가 share/에 설치하므로 ament_index로 찾는다 (실행 위치·빌드 방식 무관).
-# 이미지 데이터셋은 무거워서 설치하지 않으므로 소스 트리에서 찾는다(있을 때만 의미 있음).
-_SHARE = get_package_share_directory('camera_perception_pkg')
-_SRC_LIB = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'lib', 'Collected_Datasets')
+# 이미지 데이터가 들어있는 디렉토리의 경로를 입력
+IMAGE_DIRECTORY_PATH = 'src/camera_perception_pkg/camera_perception_pkg/lib/Collected_Datasets/sample_dataset'
 
-# 이미지 데이터가 들어있는 디렉토리의 경로 (파라미터 img_dir로 덮어쓰기 가능)
-IMAGE_DIRECTORY_PATH = os.path.join(_SRC_LIB, 'sample_dataset')
-
-# 비디오 데이터 파일의 경로 (파라미터 video_path로 덮어쓰기 가능)
-VIDEO_FILE_PATH = os.path.join(_SHARE, 'Collected_Datasets', 'driving_simulation.mp4')
+# 비디오 데이터 파일의 경로를 입력
+VIDEO_FILE_PATH = 'src/camera_perception_pkg/camera_perception_pkg/lib/Collected_Datasets/driving_simulation.mp4'
 
 # 화면에 publish하는 이미지를 띄울것인지 여부: True, 또는 False 중 택1하여 입력
 SHOW_IMAGE = True
