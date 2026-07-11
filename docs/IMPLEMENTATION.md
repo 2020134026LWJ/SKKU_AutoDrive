@@ -69,7 +69,9 @@ cv2 함수 합성이미지 테스트 통과(dominant_gradient=25.0°, get_lane_c
       `image_publisher(video)` → `yolov8` → `lane_info_extractor` → `path_planner` 구동 확인
 - [x] 구조/토픽 흐름 검증 — 노드 6개 생존, 죽은 노드 0,
       `/topic_control_signal` 10Hz로 `steering/left_speed/right_speed` 발행 확인
-- [ ] (남음) 발행 주기 안정화 — `/image_01`이 2~3Hz로 들쭉날쭉 (`cv2.imshow` 병목 의심)
+- [x] 프레임 유실 해결 — 커널 UDP 버퍼(208KB) < 이미지(921KB)라 BEST_EFFORT 구독자가 80% 유실.
+      sysctl + Fast DDS 프로파일(`fastdds_bigbuf.xml`) **둘 다** 필요. 결과: 6.6Hz → **33.4Hz**,
+      `/detections` **34Hz**. 상세 `RUNTIME_FIXES.md` §6
 
 ## Phase 3 — 하드웨어 브링업 (장치별 독립)
 

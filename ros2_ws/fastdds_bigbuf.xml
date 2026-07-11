@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--
+  Fast DDS 프로파일 — 소켓 버퍼를 크게 요청한다 (카메라 이미지용).
+
+  왜 필요한가
+  ----------
+  이미지 한 장 = 640×480×3 = 921KB. 커널 UDP 버퍼 기본값(net.core.rmem_default)은 208KB라
+  **이미지 한 장도 안 들어간다** → BEST_EFFORT로 구독하는 노드(yolov8 등)가 프레임의 80%를 잃었다.
+  (실측: 발행 33Hz인데 BEST_EFFORT 수신 6.6Hz)
+
+  두 가지가 다 필요하다:
+   1) 커널이 큰 버퍼를 **허용**해야 한다  → sysctl net.core.rmem_max (아래 setup 참고)
+   2) Fast DDS가 큰 버퍼를 **요청**해야 한다 → 이 파일 (요청 안 하면 rmem_default=208KB를 받는다)
+
+  쓰는 법
+  ------
+  export FASTRTPS_DEFAULT_PROFILES_FILE=<이 파일의 절대경로>   # ros2 launch 전, 같은 셸에서
+  (영구 적용은 ~/.bashrc 또는 scripts/setup_env.sh 참고)
+
+  커널 설정 (sudo, 재부팅 유지):
+  echo 'net.core.rmem_max=16777216' | sudo tee /etc/sysctl.d/60-ros2-image.conf
+  echo 'net.core.wmem_max=16777216' | sudo tee -a /etc/sysctl.d/60-ros2-image.conf
+-->
+<dds xmlns="http://www.eprosima.com/XMLSchemas/fastRTPS_Profiles">
+
+  <profiles>
+    <participant profile_name="big_socket_buffers" is_default_profile="true">
+      <rtps>
+        <!-- 8MB — 921KB 이미지가 여러 장 쌓여도 버틴다 (rmem_max 상한 이하여야 함) -->
+        <sendSocketBufferSize>8388608</sendSocketBufferSize>
+        <listenSocketBufferSize>8388608</listenSocketBufferSize>
+      </rtps>
+    </participant>
+  </profiles>
+
+</dds>

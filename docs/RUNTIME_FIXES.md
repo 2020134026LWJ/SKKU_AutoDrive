@@ -85,8 +85,63 @@ elif self.traffic_light_data is not None and self.traffic_light_data.data == 'Re
 
 ---
 
+## 6. 프레임 80% 유실 — 커널 UDP 버퍼 < 이미지 한 장
+
+**증상(처음 본 것)**: `/image_01`이 2~3Hz로 들쭉날쭉. `/detections` 3.9Hz.
+
+**함정 — 측정 도구가 거짓말을 했다**: `ros2 topic hz`는 파이썬이라 **921KB 이미지 33Hz를
+스스로 못 따라간다**. 이 도구가 보여준 "2Hz"는 파이프라인 속도가 아니라 **측정 도구의 한계**였다.
+최소 rclpy 구독자를 직접 짜서 세어보니 퍼블리셔는 처음부터 정확히 33Hz였다.
+(교훈: 큰 메시지에서 `ros2 topic hz` 숫자를 믿지 말 것)
+
+**구간별 실측** (범인 찾기):
+
+| 구간 | 실측 | 판정 |
+|---|---|---|
+| 영상 읽기+resize+변환 | 1.0 ms | 정상 |
+| 발행 (퍼블리셔 자체) | **33Hz 정확** | 정상 |
+| YOLO 추론 (RTX4060) | 7.6 ms (139Hz 가능) | 정상 |
+| 마스크 → ROS 메시지 | 1.8 ms | 정상 |
+| **BEST_EFFORT 수신** | **6.6Hz (80% 유실)** | **← 진범** |
+| RELIABLE 수신 | 33.4Hz | (재전송으로 버팀) |
+
+**원인**: 이미지 한 장 = 640×480×3 = **921KB**. 커널 UDP 버퍼 기본값(`net.core.rmem_default`)은
+**208KB** — 한 장도 안 들어간다. UDP는 1.4KB 패킷 수백 개로 쪼개 보내는데 버퍼가 넘쳐 대부분
+유실된다. RELIABLE은 재전송으로 버티지만, **BEST_EFFORT로 구독하는 yolov8_node는 그냥 잃는다.**
+
+**수정 — 두 개가 다 필요하다** (하나만 하면 안 된다):
+
+1. **커널이 허용** (sudo, 1회):
+   ```bash
+   echo -e 'net.core.rmem_max=16777216\nnet.core.wmem_max=16777216' \
+     | sudo tee /etc/sysctl.d/60-ros2-image.conf
+   sudo sysctl --system
+   ```
+2. **DDS가 요청** — `ros2_ws/fastdds_bigbuf.xml` (`sendSocketBufferSize`/`listenSocketBufferSize`
+   = 8MB), `FASTRTPS_DEFAULT_PROFILES_FILE`로 지정. `scripts/setup_env.sh`가 자동으로 export.
+
+> `rmem_max`는 **'허용 상한'일 뿐**이다. DDS가 명시적으로 요청하지 않으면 여전히
+> `rmem_default`(208KB)를 받는다. 실제로 커널만 열었을 때는 18.4Hz까지밖에 안 올랐고,
+> DDS 요청까지 넣어야 33.4Hz(유실 0)가 됐다.
+
+**결과**: BEST_EFFORT 수신 6.6Hz → **33.4Hz (유실 0)**, `/detections` → **34Hz** (8배).
+
+**시도했으나 효과 없던 것**: Fast DDS SHM 전용 프로파일(공유메모리). BEST_EFFORT 8.7Hz로
+거의 그대로였다 → 삭제함.
+
+---
+
+## 실행 방법 (정리)
+
+```bash
+source ~/Desktop/Projects/SKKU_AutoDrive/scripts/setup_env.sh   # ROS + DDS 프로파일 + 모델 경로
+cd ~/Desktop/Projects/SKKU_AutoDrive/ros2_ws
+colcon build --symlink-install
+ros2 launch launch_pkg perception.launch.py    # 하드웨어 0, 녹화 영상
+```
+
 ## 남은 것 (다음 세션)
 
-- **발행 주기 불안정**: `/image_01`이 들쭉날쭉(2~3Hz, 순간 0). 영상 재생 종료 또는 `cv2.imshow`
-  (SHOW_IMAGE=True) 병목 의심. `/topic_control_signal`은 10Hz로 안정.
+- `cv2.imshow`(SHOW_IMAGE=True)는 실측상 프레임당 비용이 크다 → 성능 필요할 땐 `logger:=false`.
+- `image_publisher_node`의 `print(image_msg.header)`는 매 프레임 stdout 출력(디버그 잔재) — 제거 검토.
 - Phase 3(하드웨어 브링업) 이후는 `IMPLEMENTATION.md` 참조.
