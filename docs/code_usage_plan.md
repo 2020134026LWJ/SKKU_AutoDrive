@@ -25,7 +25,7 @@
 
 ## 1. 조향 + 구동 (아두이노)
 
-**경로**: `src/control/driving/driving.ino`
+**경로**: `arduino/driving/driving.ino`
 
 ```cpp
 const int POT = A2;
@@ -46,7 +46,7 @@ else steerRight();
 시리얼로 `s<angle>l<left>r<right>\n` 문자열을 받으면 `angle`은 -7~7 범위로 클램프되고(`processData` 함수), 조향 모터는 목표각과 다르면 무조건 고정 속도(`STEERING_SPEED=128`)로 움직이고 같아지면 멈추는 방식(비례 제어 아님).
 
 **수정할 부분**
-- `resistance_most_left`, `resistance_most_right` — 이건 원 팀 가변저항 실측값. `src/control/check_variable_resistor/check_variable_resistor.ino`(A2핀 아날로그값을 시리얼로 출력하는 코드)를 그대로 업로드해서, 우리 가변저항을 좌/우 끝까지 돌렸을 때 나오는 값 2개로 교체
+- `resistance_most_left`, `resistance_most_right` — 이건 원 팀 가변저항 실측값. `arduino/check_variable_resistor/check_variable_resistor.ino`(A2핀 아날로그값을 시리얼로 출력하는 코드)를 그대로 업로드해서, 우리 가변저항을 좌/우 끝까지 돌렸을 때 나오는 값 2개로 교체
 - `STEERING_1`(2), `STEERING_2`(3), `FORWARD_RIGHT_1/2`(4,5), `FORWARD_LEFT_1/2`(6,7) 핀 번호 — 실제 모터 드라이버 배선에 맞게 수정
 - (선택) 조향을 비례 제어로 바꾸려면 `steerLeft()`/`steerRight()`에서 쓰는 고정값 `STEERING_SPEED` 대신, `abs(mapped_resistance - angle)`에 비례하는 speed 값을 `analogWrite`에 넘기도록 수정 — 목표각 근처에서 자연스럽게 감속됨
 

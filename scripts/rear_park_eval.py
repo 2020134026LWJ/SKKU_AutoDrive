@@ -7,7 +7,7 @@
 
   1) 거리를 맞게 재나        — 정답을 알고 그리므로 오차를 숫자로 낼 수 있다
   2) 옆차 가림을 견디나       — 옆차로 뒷선의 좌우를 가려도 중앙 띠로 찾아내야 한다
-  3) 안 보일 때 침묵하나 ★   — 사각지대(선이 화면 밖)에서 **아무 값도 내면 안 된다.**
+  3) 안 보일 때 침묵하나 — 사각지대(선이 화면 밖)에서 **아무 값도 내면 안 된다.**
                               거짓 거리를 내보내면 FSM이 믿고 계속 후진한다.
 
 실행:  python3 scripts/rear_park_eval.py
@@ -92,7 +92,7 @@ def main():
     silent = True
     for truth in (0.08, 0.04, 0.00):
         got = find_rear_line(render(truth, p), p)
-        state = "침묵 (정답)" if got is None else f"★ {got:.3f}m 발행 (오답 — FSM이 믿고 계속 후진한다)"
+        state = "침묵 (정답)" if got is None else f"{got:.3f}m 발행 (오답 — FSM이 믿고 계속 후진한다)"
         print(f"    실제 {truth:.2f}m → {state}")
         if got is not None:
             silent = False

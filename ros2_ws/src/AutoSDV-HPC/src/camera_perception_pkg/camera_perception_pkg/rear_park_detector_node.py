@@ -59,6 +59,7 @@ class RearParkDetector(Node):
             sat_max=self.declare_parameter('sat_max', d.sat_max).value,
             min_line_px=self.declare_parameter('min_line_px', d.min_line_px).value,
             min_line_ratio=self.declare_parameter('min_line_ratio', d.min_line_ratio).value,
+            max_line_thickness=self.declare_parameter('max_line_thickness', d.max_line_thickness).value,
             side_darker_than=self.declare_parameter('side_darker_than', d.side_darker_than).value,
             min_slot_cols=self.declare_parameter('min_slot_cols', d.min_slot_cols).value,
             min_side_cols=self.declare_parameter('min_side_cols', d.min_side_cols).value,

@@ -113,9 +113,9 @@ def main():
     print(f"    프레임 단위 오검출 : {raw:5d}  ({raw / total * 100:5.2f}%)")
     if confirmed:
         for c, n in confirmed.items():
-            print(f"    ★ 확정 오검출     : {c} {n}프레임 ({n / total * 100:.2f}%)  ← 차가 실제로 오동작한다")
+            print(f"    확정 오검출     : {c} {n}프레임 ({n / total * 100:.2f}%)  ← 차가 실제로 오동작한다")
     else:
-        print(f"    ★ 확정 오검출     : 0  ({p.consec_frames}프레임 연속 투표 통과 없음)")
+        print(f"    확정 오검출     : 0  ({p.consec_frames}프레임 연속 투표 통과 없음)")
     print(f"    (참고: 원래 '색 비율' 로직은 여기서 71% 오검출 — 빨강 55% / 초록 16%)")
 
     print("\n[2] 미검출 — 같은 영상에 가짜 신호등을 합성해서 얹음")

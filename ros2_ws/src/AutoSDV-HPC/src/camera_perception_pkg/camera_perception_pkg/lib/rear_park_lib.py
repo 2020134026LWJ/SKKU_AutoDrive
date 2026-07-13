@@ -36,7 +36,7 @@ import numpy as np
 class RearParkParams:
     """전부 ROS 파라미터로 override 가능 (docs/CALIBRATION.md '주차' 절).
 
-    ★실측이 꼭 필요한 것은 두 개다:
+    실측이 꼭 필요한 것은 두 개다:
       - src_mat  : 버드아이뷰 4점 (후방 카메라로 바닥 사각형을 찍어 잡는다)
       - m_per_px : 버드아이뷰 세로 1픽셀이 실제 몇 m인가
     나머지는 '흰 선의 생김새'라 웬만하면 안 건드려도 된다.
@@ -47,15 +47,21 @@ class RearParkParams:
     dst_mat: List[Tuple[int, int]] = field(
         default_factory=lambda: [(0, 0), (640, 0), (640, 480), (0, 480)])
 
-    m_per_px: float = 0.0022     # [m/px] ★실측. BEV 세로 1px이 실제 몇 m인가
+    m_per_px: float = 0.0022     # [m/px] 실측. BEV 세로 1px이 실제 몇 m인가
     cam_offset_m: float = 0.10   # [m] 카메라 렌즈 ~ 뒤범퍼 끝 거리. 거리를 '범퍼 기준'으로 보정
 
-    center_band: float = 0.34    # 화면 폭 대비 중앙 띠 비율 ★옆차 가림 회피의 핵심
+    center_band: float = 0.34    # 화면 폭 대비 중앙 띠 비율 옆차 가림 회피의 핵심
     white_min: int = 170         # 흰 선으로 볼 최소 밝기 (V)
     sat_max: int = 90            # 흰색은 채도가 낮다 — 색 있는 바닥/차체 배제
 
     min_line_px: int = 40        # 가로선으로 인정할 최소 흰 픽셀 수 (중앙 띠 한 행 기준)
     min_line_ratio: float = 0.45  # 중앙 띠 폭 대비 흰 픽셀 비율 하한. 얼룩/반사 배제
+    max_line_thickness: int = 30  # [px] 선의 최대 두께.
+                                  # [중요] 이게 없으면 **밝은 바닥 전체가 '선'이 된다.**
+                                  # 흰 픽셀만 찾으면 밝은 실내 바닥이 통째로 조건을 만족해서
+                                  # 모든 행이 선이 되고, 맨 아래 행을 뒷선으로 착각한다.
+                                  # (bench에서 실제로 발생 — 전방 영상을 줬더니 0.13m를 지어냄)
+                                  # **선은 두께가 있다.** 두꺼우면 그건 선이 아니라 바닥이다.
 
     # 좌우 치우침 (옆차 기준). 옆차는 바닥이 아니라 '서 있는 물체'라 사각지대에 안 들어간다.
     #
@@ -105,13 +111,33 @@ def find_rear_line(frame_bgr, p: RearParkParams) -> Optional[float]:
 
     counts = (band > 0).sum(axis=1)          # 행마다 흰 픽셀 수
     need = max(p.min_line_px, int(band_w * p.min_line_ratio))
-    rows = np.where(counts >= need)[0]
-    if rows.size == 0:
+    hit = counts >= need
+    if not hit.any():
         return None                          # 안 보인다 → 침묵
 
-    # BEV 아래쪽이 차에 가깝다 → 가장 아래 행이 우리가 다가가는 선.
-    # (연속된 행 덩어리의 아래쪽 끝을 쓴다 — 선은 두께가 있다)
-    row = int(rows.max())
+    # [중요] 흰 행을 찾는 것으로는 부족하다. **연속된 흰 행 덩어리(=선)** 를 찾고,
+    # 그 덩어리가 **얇을 때만** 선으로 인정한다.
+    #
+    # 이유: 밝은 바닥은 통째로 '흰색'이라 모든 행이 조건을 만족한다. 그러면 맨 아래
+    # 행이 뽑혀서 있지도 않은 뒷선을 지어낸다(bench에서 실제로 0.13m를 발행했다).
+    # **선은 두께가 있다. 두꺼우면 그건 선이 아니라 바닥이다.**
+    runs = []                                # (시작행, 끝행)
+    start = None
+    for i, v in enumerate(hit):
+        if v and start is None:
+            start = i
+        elif not v and start is not None:
+            runs.append((start, i - 1))
+            start = None
+    if start is not None:
+        runs.append((start, len(hit) - 1))
+
+    thin = [r for r in runs if (r[1] - r[0] + 1) <= p.max_line_thickness]
+    if not thin:
+        return None                          # 흰 덩어리는 있지만 전부 두껍다 = 바닥이다 → 침묵
+
+    # BEV 아래쪽이 차에 가깝다 → 가장 아래 덩어리가 우리가 다가가는 선.
+    row = int(max(r[1] for r in thin))
 
     px_to_bottom = (h - 1) - row
     return px_to_bottom * p.m_per_px + p.cam_offset_m

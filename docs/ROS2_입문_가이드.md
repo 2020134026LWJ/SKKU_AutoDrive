@@ -77,7 +77,7 @@ ROS2가 해주는 일은 딱 이거다:
    ▼  📻 yolov8_lane_info  · LaneInfo
 [path_planner_node]              (갈 경로 곡선 계산 = CubicSpline)
    ▼  📻 path_planning_result  · PathPlanningResult
-[motion_planner_node]            (★최종 판단: 조향각+속도)
+[motion_planner_node]            (최종 판단: 조향각+속도)
    ▲   ▲   ▲
    │   │   └─ 📻 lidar_obstacle_info · Bool   (뒤에 장애물 있나?)
    │   └───── 📻 yolov8_traffic_light_info · String (신호등 색)

@@ -23,6 +23,7 @@ setup(
             'motion_planner_node = decision_making_pkg.motion_planner_node:main',
             'path_planner_node = decision_making_pkg.path_planner_node:main',
             'parking_controller_node = decision_making_pkg.parking_controller_node:main',
+            'obstacle_avoider_node = decision_making_pkg.obstacle_avoider_node:main',
         ],
     },
 )

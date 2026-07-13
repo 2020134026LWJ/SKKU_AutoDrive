@@ -197,7 +197,7 @@ void setLeftMotorSpeed(int speed) {
 우선순위: **라이다 장애물 > 빨간 신호등 > 차선 추종** (motion_planner의 if/elif/else).
 
 **바꿀 코드**:
-- `serial_sender_node.py:17` `PORT='/dev/ttyACM0'` → `ls /dev/ttyACM*`. ⚠️ 이 노드는 import 시 포트를 열어서 아두이노 없으면 크래시 → `perception.launch.py`엔 제외해둠.
+- `serial_sender_node.py:17` `PORT='/dev/ttyACM0'` → `ls /dev/ttyACM*`. [주의] ️ 이 노드는 import 시 포트를 열어서 아두이노 없으면 크래시 → `perception.launch.py`엔 제외해둠.
 - `motion_planner_node.py:108` 조향 기준값 `52`, `:109-110` 속도 `80` → 실측 튜닝. (죽은코드/NameError는 이미 수정)
 
 ---
