@@ -85,7 +85,12 @@ class MotionPlanningNode(Node):
             self.left_speed_command = 0 
             self.right_speed_command = 0 
 
-        elif self.traffic_light_data is not None and self.traffic_light_data.data == 'Red':
+        elif (self.traffic_light_data is not None
+              and self.traffic_light_data.data == 'Red'
+              # detection_data도 확인해야 한다 — 원본은 traffic_light_data만 검사하고 아래에서
+              # self.detection_data.detections를 바로 썼다. 신호등 메시지가 첫 감지 결과보다
+              # 먼저 도착하면(시작 직후 흔함) None.detections → AttributeError로 노드가 죽는다.
+              and self.detection_data is not None):
             # 빨간색 신호등을 감지한 경우
             for detection in self.detection_data.detections:
                 if detection.class_name=='traffic_light':

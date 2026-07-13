@@ -20,8 +20,15 @@ SUB_TOPIC_NAME = "detections"
 PUB_TOPIC_NAME = "yolov8_lane_info"
 ROI_IMAGE_TOPIC_NAME = "roi_image"  # 추가: ROI 이미지 퍼블리시 토픽
 
-# 화면에 이미지를 처리하는 과정을 띄울것인지 여부: True, 또는 False 중 택1하여 입력
-SHOW_IMAGE = True
+# 처리 과정을 화면에 띄울지 (디버그 창 3개 + roi_image 토픽 발행).
+#
+# 기본 False — 둘 다 프레임마다 비용이 붙는다. imshow는 화면이 없으면 무의미하고,
+# roi_image 토픽은 **큰 이미지를 DDS로 한 벌 더 흘려보낸다** (예전에 이미지가 커널 UDP
+# 버퍼를 넘겨 프레임 80%가 유실된 적이 있다 — docs/RUNTIME_FIXES.md).
+#
+# 캘리브레이션할 때만 켠다 (버드아이뷰 4점 잡을 땐 오히려 꼭 봐야 한다):
+#   ros2 run camera_perception_pkg lane_info_extractor_node --ros-args -p show_image:=true
+SHOW_IMAGE = False
 #----------------------------------------------
 
 
@@ -68,16 +75,17 @@ class Yolov8InfoExtractor(Node):
             cv2.imshow('roi_img', roi_image)
             cv2.waitKey(1)
 
-        # roi_image를 uint8 형식으로 변환
+        # roi_image를 uint8 형식으로 변환 (아래 gradient/center 계산이 이 형식을 쓴다)
         roi_image = cv2.convertScaleAbs(roi_image)  # 64FC1 -> uint8로 변환
 
-        # roi_image를 ROS Image 메시지로 변환
-        try:
-            roi_image_msg = self.cv_bridge.cv2_to_imgmsg(roi_image, encoding="mono8")
-            # ROI 이미지를 퍼블리시
-            self.roi_image_publisher.publish(roi_image_msg)
-        except Exception as e:
-            self.get_logger().error(f"Failed to convert and publish ROI image: {e}")
+        # ROI 이미지 발행은 **디버그용**이라 show_image일 때만 한다.
+        # 큰 이미지를 DDS로 한 벌 더 흘리는 비용이 있다 (프레임 유실 이력 — RUNTIME_FIXES.md).
+        if self.show_image:
+            try:
+                roi_image_msg = self.cv_bridge.cv2_to_imgmsg(roi_image, encoding="mono8")
+                self.roi_image_publisher.publish(roi_image_msg)
+            except Exception as e:
+                self.get_logger().error(f"Failed to convert and publish ROI image: {e}")
         
         grad = CPFL.dominant_gradient(roi_image, theta_limit=70)
                 

@@ -46,6 +46,10 @@ def generate_launch_description():
         # ---------- 경로/판단 ----------
         Node(package='decision_making_pkg', executable='path_planner_node',
              name='path_planner_node', output='screen'),
+        # 주차 FSM. parking_trigger를 받으면 parking_active를 올리고, motion_planner가 양보한다.
+        #   ※ duration 값들은 개루프라 실측 필수 → docs/CALIBRATION.md "주차" 절
+        Node(package='decision_making_pkg', executable='parking_controller_node',
+             name='parking_controller_node', output='screen'),
         Node(package='decision_making_pkg', executable='motion_planner_node',
              name='motion_planner_node', output='screen'),
 

@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-package_name = 'decision_making_pkg'
+package_name = 'lidar_perception_pkg'
 
 setup(
     name=package_name,
@@ -20,9 +20,10 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'motion_planner_node = decision_making_pkg.motion_planner_node:main',
-            'path_planner_node = decision_making_pkg.path_planner_node:main',
-            'parking_controller_node = decision_making_pkg.parking_controller_node:main',
+            'lidar_publisher_node = lidar_perception_pkg.lidar_publisher_node:main',
+			'lidar_processor_node = lidar_perception_pkg.lidar_processor_node:main',
+			'lidar_obstacle_detector_node = lidar_perception_pkg.lidar_obstacle_detector_node:main',
+			
         ],
     },
 )

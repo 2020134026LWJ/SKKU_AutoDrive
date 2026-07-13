@@ -1,9 +1,7 @@
-import numpy as np
-
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import LaserScan
-from std_msgs.msg import Bool, Float32
+from std_msgs.msg import Bool
 
 from rclpy.qos import QoSProfile
 from rclpy.qos import QoSHistoryPolicy
@@ -18,37 +16,7 @@ SUB_TOPIC_NAME = 'lidar_processed'  # 구독할 토픽 이름
 
 # Publish할 토픽 이름
 PUB_TOPIC_NAME = 'lidar_obstacle_info'  # 물체 감지 여부를 퍼블리시할 토픽 이름
-PUB_DISTANCE_TOPIC_NAME = 'lidar_min_distance'  # 주차용 최소거리 [m]
-
-# 주차용 거리 측정 각도 범위 [deg].
-# 후방 라이다 기준 "차 뒤쪽"에 해당하는 범위여야 한다.
-# 라이다 장착 방향(0도가 어디를 보는지)에 따라 달라지므로 실측 후 확정할 것.
-# 파라미터로 열어놨으니 코드 수정 없이 launch/CLI에서 바꿀 수 있다.
-PARKING_ANGLE_START = 350
-PARKING_ANGLE_END = 10
 #----------------------------------------------
-
-
-def get_min_distance_in_range(ranges, start_angle, end_angle):
-    """지정한 각도 범위 안의 최소 거리 [m]. 유효값이 없으면 inf.
-
-    회피용 detect_object()가 주는 Bool과 달리, 주차는 장애물에 의도적으로
-    가까이 다가가야 해서 실제 거리값이 필요하다.
-    """
-    if len(ranges) == 0:
-        return float('inf')
-
-    angles = np.arange(len(ranges))
-    if start_angle <= end_angle:
-        mask = (angles >= start_angle) & (angles <= end_angle)
-    else:  # 0도를 걸치는 범위 (예: 350~10도)
-        mask = (angles >= start_angle) | (angles <= end_angle)
-
-    valid = np.asarray(ranges, dtype=float)[mask]
-    valid = valid[np.isfinite(valid)]  # inf/nan = 측정 실패 → 버린다
-    valid = valid[valid > 0.0]         # 0 = 유효하지 않은 값 (RPLidar가 종종 뱉음)
-
-    return float(valid.min()) if valid.size > 0 else float('inf')
 
 
 class ObjectDetection(Node):
@@ -62,12 +30,8 @@ class ObjectDetection(Node):
             depth=1
         )
 
-        self.parking_angle_start = self.declare_parameter('parking_angle_start', PARKING_ANGLE_START).value
-        self.parking_angle_end = self.declare_parameter('parking_angle_end', PARKING_ANGLE_END).value
-
         self.subscriber = self.create_subscription(LaserScan, SUB_TOPIC_NAME, self.lidar_callback, self.qos_profile)
-        self.publisher = self.create_publisher(Bool, PUB_TOPIC_NAME, self.qos_profile)
-        self.distance_publisher = self.create_publisher(Float32, PUB_DISTANCE_TOPIC_NAME, self.qos_profile)
+        self.publisher = self.create_publisher(Bool, PUB_TOPIC_NAME, self.qos_profile) 
 
         self.detection_checker = LPFL.StabilityDetector(consec_count=5) # 연속적으로 몇 번 감지 여부를 확인할지 설정
 
@@ -114,13 +78,7 @@ class ObjectDetection(Node):
         detection_msg.data = detection_result
         self.publisher.publish(detection_msg)
 
-        # 주차용 최소거리. 회피용 Bool과 독립적으로 항상 발행한다.
-        min_distance = get_min_distance_in_range(ranges, self.parking_angle_start, self.parking_angle_end)
-        distance_msg = Float32()
-        distance_msg.data = min_distance
-        self.distance_publisher.publish(distance_msg)
-
-        self.get_logger().info(f'Lidar Obstacle detected: {detection_result}, min_distance: {min_distance:.3f} m')
+        self.get_logger().info(f'Lidar Obstacle detected: {detection_result}')
 
 def main(args=None):
     rclpy.init(args=args)

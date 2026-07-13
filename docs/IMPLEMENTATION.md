@@ -90,12 +90,55 @@ cv2 함수 합성이미지 테스트 통과(dominant_gradient=25.0°, get_lane_c
 
 ## Phase 5 — 신규 작성 (레포에 없음)
 
-- [ ] **신호등** — `best_urp.pt`에 `traffic_light` 클래스 없음. §3.4 대안 A:
-      YOLO 우회, 전체 프레임에 HSV `cv2.inRange`로 빨강/초록 contour 직접 검출.
-      `get_traffic_light_color`의 HSV 범위는 재사용, `detection.bbox` 의존만 제거
-- [ ] **후진 주차** — §8. `lidar_obstacle_detector`에 `lidar_min_distance`(Float32) 토픽 추가 +
-      `motion_planner`에 `parking_mode` 분기(거리 기반 비례 정지). 주차 트리거/후진 조향/완료 판단은 신규 설계
-- [ ] **후방 카메라** — 활용 노드 신규 작성 (모니터링/후방 인식)
+- [x] **신호등** — 로직 완료 (2026-07-13). `best_urp.pt`에 `traffic_light` 클래스가 없어
+      YOLO bbox를 못 쓴다 → 영상에서 직접 검출. **실측만 남음** → `docs/CALIBRATION.md` "신호등" 절.
+
+      ★**"색 비율" 방식은 못 쓴다** — 화면 위쪽의 빨강/초록 픽셀 비율로 판정하면
+      신호등이 **하나도 없는** 녹화 영상에서 **71%가 오검출**된다 (빨강 55% = 주황 기둥,
+      초록 16% = 잔디천·화분). 이 값이 motion_planner로 가면 차가 아무 데서나 선다.
+
+      → **blob 검출로 교체** (`lib/traffic_light_lib.py`, ROS 비의존):
+      밝고(V≥180) 진한(S≥120) 픽셀만 남긴 뒤 덩어리를 찾아 **면적·원형도·가로세로비·
+      어두운 등기구**로 거른다. 색면(기둥·천)과 점등부의 차이는 색이 아니라 **형태와 밝기**다.
+      - 결정타는 **"점등부는 어두운 등기구에 박혀 있다"** (`_has_dark_housing`).
+        빨간 자판기·초록 간판은 색도 모양도 램프 같지만 **둘레가 밝아서** 여기서 걸린다.
+      - `TrafficLightVoter`: 3프레임 연속 같은 색이어야 확정 (반짝임 방어)
+
+      ⛔**motion_planner의 빨간불 분기도 같이 고쳐야 한다** — 검출부만 바꾸고 두면,
+      판단부가 여전히 없는 YOLO bbox(`class_name=='traffic_light'`)를 뒤진다 →
+      (1) 진짜 빨간불이어도 **안 멈추고** (2) `elif`엔 들어가서 `else`(정상주행)를 건너뛰어
+      **직전 조향값이 그대로 계속 발행**된다(차선추종 정지). 대안 A를 반쪽만 적용한 결과.
+
+      검증 (`python3 scripts/traffic_light_eval.py`, 하드웨어 0):
+      오검출 **0%** (71% → 0), 합성 신호등 검출률 **99.9%** (램프 반지름 ≥9px)
+- [x] **후진 주차 (직각)** — 로직 완료, `./scripts/test_parking.sh` 3 시나리오 통과 (하드웨어 없이).
+- [x] **후진 주차 (직각)** — 로직 완료, `./scripts/test_parking.sh` 3 시나리오 통과 (하드웨어 없이).
+      **남은 건 실측뿐** → `docs/CALIBRATION.md` "주차" 절.
+      - `lidar_obstacle_detector`: `lidar_min_distance`(Float32) 토픽 추가 (회피용 Bool은 유지)
+      - `parking_controller_node` 신규: FSM (IDLE→ALIGN→REVERSE_TURN→REVERSE_STRAIGHT→DONE/ABORT).
+        `motion_planner`의 상태 없는 if/elif에 끼워넣지 않고 별도 노드로 분리
+      - `motion_planner`: `parking_active`면 양보(relay). **라이다 정지 분기보다 먼저 검사** —
+        안 그러면 후진 중 뒷벽이 잡혀서 주차칸 입구에 멈춘다
+      - 안전망: 라이다 값 끊기면 즉시 정지 / 전체 제한시간 초과 시 ABORT (개루프 구간 폭주 방지)
+      - 트리거는 `parking_trigger`(Bool) 토픽으로 분리 → 지금은 수동 발행,
+        나중에 라이다 빈칸 탐지든 YOLO 표지판이든 여기에 꽂기만 하면 FSM은 안 건드림
+- [x] **후방 카메라** — `rear_park_detector_node` 신규 (2026-07-13). **주차 FSM의 '눈'.**
+
+      뒷벽이 없다는 게 확인되면서(양옆에 차만 있음) 멈출 근거가 라이다 → 카메라로 바뀌었다.
+      `image_02` 구독 → `parking_rear_distance`(뒤 경계선까지 거리) + `parking_lateral_error`
+      (칸 중앙에서 좌우 치우침) 발행. FSM은 Float32 하나만 소비하므로 출처를 모른다.
+
+      - **옆차가 뒷선의 좌우를 가린다** → 버드아이뷰의 **중앙 띠**만 훑는다. 우리 차 바로
+        뒤는 마지막까지 열려 있다.
+      - **안 보이면 침묵한다** — 억지로 추정한 거리를 내보내면 FSM이 믿고 계속 후진한다.
+        FSM이 침묵을 상황에 따라 해석한다(아직 못 봄 / 사각지대 = 다 들어옴 / 고장).
+      - **'어둡다'를 절대 밝기로 정하지 말 것** — V<110으로 뒀더니 바닥(V=96)까지 차로 잡혀
+        화면 전체가 옆차가 됐다. 옆차의 조건은 '어둡다'가 아니라 **'바닥보다 어둡다'** 다.
+
+      검증 (`python3 scripts/rear_park_eval.py`, 합성 장면): 거리오차 최대 0.9cm /
+      사각지대에서 침묵 / 치우침 오차 0.0cm. ROS에서도 노드를 띄워 거리 발행 → 사각지대
+      진입 시 발행 중단까지 확인.
+      **남은 건 실측** — 버드아이뷰 4점(`src_mat`)과 `m_per_px`. 실차 후방 영상이 필요하다.
 
 ## Phase 6 — 통합 launch
 
